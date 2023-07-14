@@ -54,7 +54,7 @@ struct dipole calculate(double b_freq, double t_freq)
         dp.distance[a] = (double)a / 90 * wire_len_base;
         dp.t_amplitude[a] = sin(deg_to_rad((double)a * deg_ratio));
         dp.b_amplitude[a] = sin(deg_to_rad((double)a));
-        dp.impedance[a] = 73.1 / pow(sin(2.0 * (sin(deg_to_rad((double)a)) * wire_len_base_meters) * (M_PI / wavelength)), 2.0);
+        dp.impedance[a] = 73.1 / pow(sin(deg_to_rad((double)a * deg_ratio)), 2.0);
     }
 
     return dp;
@@ -116,17 +116,17 @@ int main(void)
         dpdb[i] = calculate(freq_base, buffer[i]);
     }
 
-    printf("\n\nL_%%\tS_%%\tL_Long\tL_Short\tImp\t\tFreqs\n");
+    printf("\n\nL_%%\tS_%%\tL_Long\tL_Short\t\t\tFreqs\n");
 
     for (int x = 90; x >= 0; x--)
     {
-        printf("\n%5.1f\t%5.1f\t%5.1f\t%5.1f\t%5.1f\t\t", 100.0 - dpdb[0].percent[x],dpdb[0].percent[x], total_wire_len - dpdb[0].distance[x] , dpdb[0].distance[x], dpdb[0].impedance[x]); 
+        printf("\n%5.1f\t%5.1f\t%5.1f\t%5.1f\t\t", 100.0 - dpdb[0].percent[x],dpdb[0].percent[x], total_wire_len - dpdb[0].distance[x] , dpdb[0].distance[x]); 
         int count=0;
         for (int i = 0; i < numberOfFields; i++)
         {
             if (fabs(dpdb[0].b_amplitude[x]) >= threshold && fabs(dpdb[i].t_amplitude[x]) >= threshold) 
             {
-                printf(" %5.3f(%1.2f) ",buffer[i],dpdb[i].t_amplitude[x]);
+                printf(" %5.3f(%1.2f,%1.1f) ",buffer[i],dpdb[i].t_amplitude[x],dpdb[i].impedance[x]);
             }
         }
         printf("\n");
@@ -139,14 +139,3 @@ int main(void)
 
     return 0;
 }
-
-
-/*
- printf("\n\nFrequency: %5.1f\n\tAngle\tPercent\tDistance\tB_Amplitude\tT_Amplitude\tImpedance", buffer[i]);
-        for (int x = 0; x <= 90; x++)
-        {
-                if ((fabs(dp.b_amplitude[x]) >= threshold && fabs(dp.t_amplitude[x]) >= threshold)||threshold == 0.0)
-                    printf("\n\t%d\t%5.1f\t%5.1f\t\t%5.3f\t\t%5.3f\t\t%5.1f", x, dp.percent[x], dp.distance[x], dp.b_amplitude[x], dp.t_amplitude[x], dp.impedance[x]);    
-        }
-
-*/
