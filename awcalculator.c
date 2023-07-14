@@ -21,7 +21,6 @@ double deg_to_rad(double deg)
     return M_PI / 180.0 * deg;
 }
 
-
 void array_sort_double(double *array, int n)
 {
     int i, j, temp;
@@ -55,7 +54,7 @@ struct dipole calculate(double b_freq, double t_freq)
         dp.distance[a] = (double)a / 90 * wire_len_base;
         dp.t_amplitude[a] = sin(deg_to_rad((double)a * deg_ratio));
         dp.b_amplitude[a] = sin(deg_to_rad((double)a));
-        dp.impedance[a] = 73.1 / pow(sin(2.0 * (sin(deg_to_rad((double)a)) * wire_len_base_meters) * (M_PI / wavelength)), 2.0);
+        dp.impedance[a] = 73.1 / pow(sin(deg_to_rad((double)a * deg_ratio)), 2.0);
     }
 
     return dp;
@@ -69,19 +68,16 @@ int main(void)
     char *line;
     int numberOfFields;
     double threshold = 0.0;
+    double total_wire_len; 
+    
+    struct dipole *dpdb;
 
-    struct dipole dp;
-
-    line = getstring("\n<F>ull or <S>ummary? ");
-
-    if (line[0] == 'S' || line[0] == 's')
+    while (1)
     {
-        while (1)
-        {
-            threshold = getdouble("\nEnter the match threshold (0.0-1.0): ");
-            if (threshold > 0.0 && threshold <= 1.0) break;
-        }
+        threshold = getdouble("\nEnter the match threshold (0.0-1.0): ");
+        if (threshold > 0.0 && threshold <= 1.0) break;
     }
+
 
     line = getstring("\nEnter frequencies separated by commas: ");
 
@@ -109,19 +105,37 @@ int main(void)
 
     freq_base = buffer[0];
 
-    for (int i = 1; i < numberOfFields; i++)
-    {
-        dp = calculate(freq_base, buffer[i]);
+    total_wire_len = 468.0 / freq_base;
 
-        printf("\n\nFrequency: %5.1f\n\tAngle\tPercent\tDistance\tB_Amplitude\tT_Amplitude\tImpedance", buffer[i]);
-        for (int x = 0; x <= 90; x++)
-        {
-                if ((fabs(dp.b_amplitude[x]) >= threshold && fabs(dp.t_amplitude[x]) >= threshold)||threshold == 0.0)
-                    printf("\n\t%d\t%5.1f\t%5.1f\t\t%5.3f\t\t%5.3f\t\t%5.1f", x, dp.percent[x], dp.distance[x], dp.b_amplitude[x], dp.t_amplitude[x], dp.impedance[x]);    
-        }
+    dpdb = malloc(sizeof(struct dipole) * numberOfFields);
+    if (dpdb == NULL)
+        return 1;
+
+    for (int i = 0; i < numberOfFields; i++)
+    {
+        dpdb[i] = calculate(freq_base, buffer[i]);
     }
 
-    free(buffer);
+    printf("\n\nL_%%\tS_%%\tL_Long\tL_Short\t\t\tFreqs\n");
+
+    for (int x = 90; x >= 0; x--)
+    {
+        printf("\n%5.1f\t%5.1f\t%5.1f\t%5.1f\t\t", 100.0 - dpdb[0].percent[x],dpdb[0].percent[x], total_wire_len - dpdb[0].distance[x] , dpdb[0].distance[x]); 
+        int count=0;
+        for (int i = 0; i < numberOfFields; i++)
+        {
+            if (fabs(dpdb[0].b_amplitude[x]) >= threshold && fabs(dpdb[i].t_amplitude[x]) >= threshold) 
+            {
+                printf(" %5.3f(%1.2f,%1.1f) ",buffer[i],dpdb[i].t_amplitude[x],dpdb[i].impedance[x]);
+            }
+        }
+        printf("\n");
+       
+    }
+
+    if (dpdb) free (dpdb);
+
+    if (buffer) free(buffer);
 
     return 0;
 }
