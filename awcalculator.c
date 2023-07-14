@@ -137,5 +137,8 @@ int main(void)
 
     if (buffer) free(buffer);
 
+    printf("Press Enter to Exit");
+    getch();
+
     return 0;
 }
