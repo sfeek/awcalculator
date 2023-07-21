@@ -116,11 +116,11 @@ int main(void)
         dpdb[i] = calculate(freq_base, buffer[i]);
     }
 
-    printf("\n\nL_%%\tS_%%\tL_Long\tL_Short\t\t\tFreqs\n");
+    printf("\n\nL_%%\tS_%%\t\tL_Long\tL_Short\t\t\tFreqs\n");
 
     for (int x = 90; x >= 0; x--)
     {
-        printf("\n%5.1f\t%5.1f\t%5.1f\t%5.1f\t\t", 100.0 - dpdb[0].percent[x],dpdb[0].percent[x], total_wire_len - dpdb[0].distance[x] , dpdb[0].distance[x]); 
+        printf("\n%5.1f\t%5.1f\t\t%5.1f\t%5.1f\t\t", 100.0 - dpdb[0].percent[x],dpdb[0].percent[x], total_wire_len - dpdb[0].distance[x] , dpdb[0].distance[x]); 
         int count=0;
         for (int i = 0; i < numberOfFields; i++)
         {
