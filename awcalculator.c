@@ -23,7 +23,8 @@ double deg_to_rad(double deg)
 
 void array_sort_double(double *array, int n)
 {
-    int i, j, temp;
+    int i, j;
+    double temp;
 
     for (i = 0; i < n; i++)
     {
