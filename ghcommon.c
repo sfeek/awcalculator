@@ -22,9 +22,7 @@ int append_string(char **s1, char *s2)
 		len_s1 = strlen(*s1);
 		if (!(t = realloc(*s1, (len_s1 + len_s2 + 1) * sizeof(char))))
 		{
-			if (*s1)
-				free(*s1);
-			*s1 = NULL;
+			free(*s1);
 			return FAIL_MEMORY;
 		}
 		else
@@ -47,15 +45,14 @@ size_t get_string(char **s, const char *display)
 	char cs[2];
 	size_t count = 0;
 
-	if (display)
-		printf("%s", display);
+	printf("%s", display);
 
 	while ((c = fgetc(stdin)) != '\n')
 	{
 		cs[0] = c;
 		cs[1] = 0;
 		if (append_string(s, cs))
-			return 0;
+			break;
 
 		count++;
 	}
@@ -83,11 +80,9 @@ int copy_string(char **s, char *s1)
 	}
 	else
 	{
-		if (!(t = realloc(*s, (len + 1) * sizeof(char))))
+		if (!(t = realloc(*s, len + 1)))
 		{
-			if (*s)
-				free(*s);
-			*s = NULL;
+			free(*s);
 			return FAIL_MEMORY;
 		}
 		else
@@ -107,13 +102,11 @@ int truncate_string(char **s, size_t len)
 		return SUCCESS;
 
 	if (len >= strlen(*s))
-		return FAIL_PARAMETER;
+		return FAIL;
 
 	if (!(t = realloc(*s, (len + 2) * sizeof(char))))
 	{
-		if (*s)
-			free(*s);
-		*s = NULL;
+		free(*s);
 		return FAIL_MEMORY;
 	}
 	else
@@ -136,16 +129,17 @@ int sprintf_string(char **s, char *fmt, ...)
 
 	if (*s == NULL)
 	{
-		if (!(*s = malloc((len + 1) * sizeof(char))))
+		*s = malloc(len + 1);
+		if (*s == NULL)
 			return FAIL_MEMORY;
 	}
 	else
 	{
-		if (!(t = realloc(*s, (len + 1) * sizeof(char))))
+		t = realloc(*s, len + 1);
+
+		if (t == NULL)
 		{
-			if (*s)
-				free(*s);
-			*s = NULL;
+			free(*s);
 			return FAIL_MEMORY;
 		}
 		else
@@ -168,10 +162,10 @@ int replace_string(char **s, const char *oldW, const char *newW)
 	size_t oldWlen = strlen(oldW);
 
 	if (*s == NULL)
-		return FAIL_PARAMETER;
+		return FAIL;
 
 	str = strdup(*s);
-	l = strlen(str);
+	l = strlen(str) + 1;
 
 	for (i = 0; str[i] != '\0'; i++)
 	{
@@ -184,9 +178,7 @@ int replace_string(char **s, const char *oldW, const char *newW)
 
 	if (!(r = realloc(*s, (i + cnt * (newWlen - oldWlen) + 1) * sizeof(char))))
 	{
-		if (*s)
-			free(*s);
-		*s = NULL;
+		free(*s);
 		return FAIL_MEMORY;
 	}
 
@@ -207,11 +199,7 @@ int replace_string(char **s, const char *oldW, const char *newW)
 	}
 
 	r[j] = '\0';
-
-	if (str)
-		free(str);
-	str = NULL;
-
+	free(str);
 	*s = r;
 
 	return SUCCESS;
@@ -227,13 +215,12 @@ int wrap_string(char **s, size_t columns)
 	if (*s == NULL)
 		return FAIL;
 
-	l = strlen(*s);
+	l = strlen(*s) + 2;
+	t = (char *)realloc(*s, l * sizeof(char));
 
-	if (!(t = realloc(*s, (l + 1) * sizeof(char))))
+	if (t == NULL)
 	{
-		if (*s)
-			free(*s);
-		*s = NULL;
+		free(*s);
 		return FAIL_MEMORY;
 	}
 
@@ -251,7 +238,6 @@ int wrap_string(char **s, size_t columns)
 			}
 		}
 	}
-	t[w] = '\0';
 
 	*s = t;
 
@@ -264,10 +250,10 @@ int sub_string(char **str, size_t s, size_t e)
 	size_t x;
 	size_t l = strlen(*str);
 
-	if (e < s)
-		return FAIL_PARAMETER;
+	if (e <= s)
+		return FAIL_NUMBER;
 	if (s > l || e > l)
-		return FAIL_PARAMETER;
+		return FAIL_NUMBER;
 
 	if (!(temp = malloc((e - s + 2) * sizeof(char))))
 		return FAIL_MEMORY;
@@ -291,7 +277,7 @@ int left_string(char **str, size_t s)
 	size_t l = strlen(*str);
 
 	if (s > l)
-		return FAIL_PARAMETER;
+		return FAIL_NUMBER;
 
 	if (!(temp = malloc((s + 2) * sizeof(char))))
 		return FAIL_MEMORY;
@@ -315,7 +301,7 @@ int right_string(char **str, size_t s)
 	size_t l = strlen(*str);
 
 	if (s > l)
-		return FAIL_PARAMETER;
+		return FAIL_NUMBER;
 
 	if (!(temp = malloc((s + 2) * sizeof(char))))
 		return FAIL_MEMORY;
@@ -367,10 +353,6 @@ int string_to_double(const char *str, double *v)
 {
 	char *ptr;
 	errno = 0;
-
-	if (str == NULL)
-		return FAIL_PARAMETER;
-
 	*v = strtod(str, &ptr);
 
 	if (errno == ERANGE)
@@ -388,20 +370,18 @@ int string_to_int(const char *str, int *v)
 {
 	char *ptr;
 	errno = 0;
-
-	if (str == NULL)
-		return FAIL_PARAMETER;
-
 	*v = (int)strtol(str, &ptr, 10);
 
 	if (errno == ERANGE)
 	{
-		return FAIL_NUMBER;
+		printf("\nNumber Overflow/Underflow Error!\n");
+		return FAIL;
 	}
 
 	if (str == ptr)
 	{
-		return FAIL_NUMBER;
+		printf("\nInvalid Number Conversion Error!\n");
+		return FAIL;
 	}
 
 	return SUCCESS;
@@ -410,17 +390,14 @@ int string_to_int(const char *str, int *v)
 size_t int_to_string(char **s, int i)
 {
 	sprintf_string(s, "%d", i);
-
 	return strlen(*s);
 }
 
 size_t double_to_string(char **s, double d, int digits)
 {
 	char *dlen = NULL;
-
 	sprintf_string(&dlen, "%%0.%df", digits);
 	sprintf_string(s, dlen, d);
-
 	return strlen(*s);
 }
 
@@ -430,15 +407,11 @@ double get_double(const char *display)
 	double value;
 	int rtn;
 
-	while (TRUE)
+	while (1)
 	{
-		if (get_string(&buffer, display) == 0)
-			continue;
-
+		get_string(&buffer, display);
 		rtn = string_to_double(buffer, &value);
-
-		if (buffer)
-			free(buffer);
+		free(buffer);
 		buffer = NULL;
 
 		if (rtn == SUCCESS)
@@ -452,15 +425,11 @@ int get_int(const char *display)
 	int value;
 	int rtn;
 
-	while (TRUE)
+	while (1)
 	{
-		if (get_string(&buffer, display) == 0)
-			continue;
-
+		get_string(&buffer, display);
 		rtn = string_to_int(buffer, &value);
-
-		if (buffer)
-			free(buffer);
+		free(buffer);
 		buffer = NULL;
 
 		if (rtn == EXIT_SUCCESS)
@@ -478,41 +447,105 @@ double rad_to_deg(double rad)
 	return rad * 180.0 / PI;
 }
 
-void array_sort_double(double *array, size_t n)
+void d_swap(double *a, double *b)
 {
-	int i, j;
-	double temp;
+	double t = *a;
+	*a = *b;
+	*b = t;
+}
 
-	for (i = 0; i < n; i++)
+int d_partition(double arr[], int low, int high)
+{
+	double pivot = arr[high];
+
+	int i = (low - 1);
+
+	for (int j = low; j <= high - 1; j++)
 	{
-		for (j = 0; j < n - 1; j++)
+
+		if (arr[j] < pivot)
 		{
-			if (array[j] > array[j + 1])
-			{
-				temp = array[j];
-				array[j] = array[j + 1];
-				array[j + 1] = temp;
-			}
+			i++;
+			d_swap(&arr[i], &arr[j]);
 		}
+	}
+	d_swap(&arr[i + 1], &arr[high]);
+
+	return (i + 1);
+}
+
+void d_sort(double arr[], int low, int high)
+{
+	if (low < high)
+	{
+
+		int pi = d_partition(arr, low, high);
+
+		d_sort(arr, low, pi - 1);
+		d_sort(arr, pi + 1, high);
 	}
 }
 
-void array_sort_int(int *array, size_t n)
+int array_sort_double(double arr[], int count)
 {
-	int i, j, temp;
+	if (arr == NULL)
+		return FAIL_PARAMETER;
+	if (count < 2)
+		return FAIL_PARAMETER;
 
-	for (i = 0; i < n; i++)
+	d_sort(arr, 0, count - 1);
+
+	return SUCCESS;
+}
+
+void i_swap(int *a, int *b)
+{
+	int t = *a;
+	*a = *b;
+	*b = t;
+}
+
+int i_partition(int arr[], int low, int high)
+{
+	int pivot = arr[high];
+
+	int i = (low - 1);
+
+	for (int j = low; j <= high - 1; j++)
 	{
-		for (j = 0; j < n - 1; j++)
+
+		if (arr[j] < pivot)
 		{
-			if (array[j] > array[j + 1])
-			{
-				temp = array[j];
-				array[j] = array[j + 1];
-				array[j + 1] = temp;
-			}
+			i++;
+			i_swap(&arr[i], &arr[j]);
 		}
 	}
+	i_swap(&arr[i + 1], &arr[high]);
+	return (i + 1);
+}
+
+void i_sort(int arr[], int low, int high)
+{
+	if (low < high)
+	{
+
+		int pi = i_partition(arr, low, high);
+
+		i_sort(arr, low, pi - 1);
+		i_sort(arr, pi + 1, high);
+	}
+}
+
+int array_sort_int(int arr[], int count)
+{
+	if (arr == NULL)
+		return FAIL_PARAMETER;
+	if (count < 2)
+		return FAIL_PARAMETER;
+
+	i_sort(arr, 0, count - 1);
+
+	return SUCCESS;
 }
 
 /* CSV Functions*/
@@ -533,7 +566,7 @@ int csv_parse(char ***array, char *str, size_t *number_of_fields)
 	int fieldLength;
 
 	/* Allocate memory for the comma position array */
-	if (!(comma_positions = calloc(1, sizeof(int) * maxFieldCount)))
+	if (!(comma_positions = calloc(1, 1 + sizeof(int) * maxFieldCount)))
 	{
 		return FAIL_MEMORY;
 	}
@@ -641,9 +674,8 @@ int csv_parse(char ***array, char *str, size_t *number_of_fields)
 
 	/* Clean up the dynamic arrays */
 	if (comma_positions)
-		free(comma_positions);
+		(comma_positions);
 	comma_positions = NULL;
-
 	if (newStr)
 		free(newStr);
 	newStr = NULL;
@@ -666,13 +698,11 @@ void cleanup_csv_strings(char **strArray, size_t numberOfStrings)
 	/* Free the individual strings */
 	for (i = 0; i < numberOfStrings; i++)
 	{
-		if (strArray[i])
-			free(strArray[i]);
+		free(strArray[i]);
 		strArray[i] = NULL;
 	}
 
 	/* Once the strings themselves are freed, free the actual array itself */
-	if (strArray)
-		free(strArray);
+	free(strArray);
 	strArray = NULL;
 }
