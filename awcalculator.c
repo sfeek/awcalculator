@@ -64,7 +64,7 @@ int main(void)
         return FAIL;
     }
 
-    if (line) free (line);
+    free_malloc (line);
 
     if (!(buffer = realloc(buffer, sizeof(double) * numberOfFields))) return FAIL;
 
@@ -105,10 +105,8 @@ int main(void)
        
     }
 
-    if (dpdb) free (dpdb);
-    dpdb = NULL;
-    if (buffer) free (buffer);
-    buffer = NULL;
+    free_malloc (dpdb);
+    free_malloc (buffer);
 
     pause_for_enter("\nPress Enter to Exit\n");
 

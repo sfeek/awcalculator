@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #define FALSE 0 /* False */
 #define TRUE 1 /* True */
@@ -51,3 +52,5 @@ void i_swap(int *, int *);
 int i_partition(int [], int, int);
 void i_sort(int [], int, int);
 int array_sort_int(int [], int);
+
+void free_malloc(void *);
