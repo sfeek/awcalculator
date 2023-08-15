@@ -1,5 +1,10 @@
 #include "ghcommon.h"
 
+#ifdef _WIN32
+	#include <complex.h>
+	#include <math.h>
+#endif
+
 int append_string(char **s1, char *s2)
 {
 	char *t;
@@ -22,7 +27,8 @@ int append_string(char **s1, char *s2)
 		len_s1 = strlen(*s1);
 		if (!(t = realloc(*s1, (len_s1 + len_s2 + 1) * sizeof(char))))
 		{
-			free(*s1);
+			free_malloc(*s1);
+
 			return FAIL_MEMORY;
 		}
 		else
@@ -45,14 +51,15 @@ size_t get_string(char **s, const char *display)
 	char cs[2];
 	size_t count = 0;
 
-	printf("%s", display);
+	if (display)
+		printf("%s", display);
 
 	while ((c = fgetc(stdin)) != '\n')
 	{
 		cs[0] = c;
 		cs[1] = 0;
 		if (append_string(s, cs))
-			break;
+			return 0;
 
 		count++;
 	}
@@ -80,9 +87,10 @@ int copy_string(char **s, char *s1)
 	}
 	else
 	{
-		if (!(t = realloc(*s, len + 1)))
+		if (!(t = realloc(*s, (len + 1) * sizeof(char))))
 		{
-			free(*s);
+			free_malloc(*s);
+
 			return FAIL_MEMORY;
 		}
 		else
@@ -102,11 +110,12 @@ int truncate_string(char **s, size_t len)
 		return SUCCESS;
 
 	if (len >= strlen(*s))
-		return FAIL;
+		return FAIL_PARAMETER;
 
 	if (!(t = realloc(*s, (len + 2) * sizeof(char))))
 	{
-		free(*s);
+		free_malloc(*s);
+
 		return FAIL_MEMORY;
 	}
 	else
@@ -129,17 +138,15 @@ int sprintf_string(char **s, char *fmt, ...)
 
 	if (*s == NULL)
 	{
-		*s = malloc(len + 1);
-		if (*s == NULL)
+		if (!(*s = malloc((len + 1) * sizeof(char))))
 			return FAIL_MEMORY;
 	}
 	else
 	{
-		t = realloc(*s, len + 1);
-
-		if (t == NULL)
+		if (!(t = realloc(*s, (len + 1) * sizeof(char))))
 		{
-			free(*s);
+			free_malloc(*s);
+
 			return FAIL_MEMORY;
 		}
 		else
@@ -162,10 +169,10 @@ int replace_string(char **s, const char *oldW, const char *newW)
 	size_t oldWlen = strlen(oldW);
 
 	if (*s == NULL)
-		return FAIL;
+		return FAIL_PARAMETER;
 
 	str = strdup(*s);
-	l = strlen(str) + 1;
+	l = strlen(str);
 
 	for (i = 0; str[i] != '\0'; i++)
 	{
@@ -178,7 +185,8 @@ int replace_string(char **s, const char *oldW, const char *newW)
 
 	if (!(r = realloc(*s, (i + cnt * (newWlen - oldWlen) + 1) * sizeof(char))))
 	{
-		free(*s);
+		free_malloc(*s);
+
 		return FAIL_MEMORY;
 	}
 
@@ -199,7 +207,9 @@ int replace_string(char **s, const char *oldW, const char *newW)
 	}
 
 	r[j] = '\0';
-	free(str);
+
+	free_malloc(str);
+
 	*s = r;
 
 	return SUCCESS;
@@ -215,12 +225,12 @@ int wrap_string(char **s, size_t columns)
 	if (*s == NULL)
 		return FAIL;
 
-	l = strlen(*s) + 2;
-	t = (char *)realloc(*s, l * sizeof(char));
+	l = strlen(*s);
 
-	if (t == NULL)
+	if (!(t = realloc(*s, (l + 1) * sizeof(char))))
 	{
-		free(*s);
+		free_malloc(*s);
+
 		return FAIL_MEMORY;
 	}
 
@@ -238,6 +248,7 @@ int wrap_string(char **s, size_t columns)
 			}
 		}
 	}
+	t[w] = '\0';
 
 	*s = t;
 
@@ -250,10 +261,10 @@ int sub_string(char **str, size_t s, size_t e)
 	size_t x;
 	size_t l = strlen(*str);
 
-	if (e <= s)
-		return FAIL_NUMBER;
+	if (e < s)
+		return FAIL_PARAMETER;
 	if (s > l || e > l)
-		return FAIL_NUMBER;
+		return FAIL_PARAMETER;
 
 	if (!(temp = malloc((e - s + 2) * sizeof(char))))
 		return FAIL_MEMORY;
@@ -277,7 +288,7 @@ int left_string(char **str, size_t s)
 	size_t l = strlen(*str);
 
 	if (s > l)
-		return FAIL_NUMBER;
+		return FAIL_PARAMETER;
 
 	if (!(temp = malloc((s + 2) * sizeof(char))))
 		return FAIL_MEMORY;
@@ -301,7 +312,7 @@ int right_string(char **str, size_t s)
 	size_t l = strlen(*str);
 
 	if (s > l)
-		return FAIL_NUMBER;
+		return FAIL_PARAMETER;
 
 	if (!(temp = malloc((s + 2) * sizeof(char))))
 		return FAIL_MEMORY;
@@ -335,6 +346,12 @@ void pause_for_enter(const char *display)
 	return;
 }
 
+void free_malloc(void *m)
+{
+	if (m) free(m);
+	m = NULL;
+}
+
 /* Math Functions */
 
 /* Used with FOR loops to properly handle fractional step values */
@@ -353,6 +370,10 @@ int string_to_double(const char *str, double *v)
 {
 	char *ptr;
 	errno = 0;
+
+	if (str == NULL)
+		return FAIL_PARAMETER;
+
 	*v = strtod(str, &ptr);
 
 	if (errno == ERANGE)
@@ -370,18 +391,20 @@ int string_to_int(const char *str, int *v)
 {
 	char *ptr;
 	errno = 0;
+
+	if (str == NULL)
+		return FAIL_PARAMETER;
+
 	*v = (int)strtol(str, &ptr, 10);
 
 	if (errno == ERANGE)
 	{
-		printf("\nNumber Overflow/Underflow Error!\n");
-		return FAIL;
+		return FAIL_NUMBER;
 	}
 
 	if (str == ptr)
 	{
-		printf("\nInvalid Number Conversion Error!\n");
-		return FAIL;
+		return FAIL_NUMBER;
 	}
 
 	return SUCCESS;
@@ -390,14 +413,17 @@ int string_to_int(const char *str, int *v)
 size_t int_to_string(char **s, int i)
 {
 	sprintf_string(s, "%d", i);
+
 	return strlen(*s);
 }
 
 size_t double_to_string(char **s, double d, int digits)
 {
 	char *dlen = NULL;
+
 	sprintf_string(&dlen, "%%0.%df", digits);
 	sprintf_string(s, dlen, d);
+
 	return strlen(*s);
 }
 
@@ -407,12 +433,14 @@ double get_double(const char *display)
 	double value;
 	int rtn;
 
-	while (1)
+	while (TRUE)
 	{
-		get_string(&buffer, display);
+		if (get_string(&buffer, display) == 0)
+			continue;
+
 		rtn = string_to_double(buffer, &value);
-		free(buffer);
-		buffer = NULL;
+
+		free_malloc(buffer);
 
 		if (rtn == SUCCESS)
 			return value;
@@ -425,12 +453,14 @@ int get_int(const char *display)
 	int value;
 	int rtn;
 
-	while (1)
+	while (TRUE)
 	{
-		get_string(&buffer, display);
+		if (get_string(&buffer, display) == 0)
+			continue;
+
 		rtn = string_to_int(buffer, &value);
-		free(buffer);
-		buffer = NULL;
+
+		free_malloc(buffer);
 
 		if (rtn == EXIT_SUCCESS)
 			return value;
@@ -551,41 +581,45 @@ int array_sort_int(int arr[], int count)
 /* CSV Functions*/
 int csv_parse(char ***array, char *str, size_t *number_of_fields)
 {
-	char *newStr = NULL;
-	char currentCharacter;
-	char **strArray = NULL;
+	char *new_str = NULL;
+	char current_character;
+	char **str_array = NULL;
 	int quote = 0;
-	size_t csvLength = strlen(str);
-	int maxFieldCount = 2; /* Start with two fields as MAX */
+	size_t csv_length; 
+	int max_field_count = 2; /* Start with two fields as MAX */
 	int *comma_positions = NULL;
 	int *comma_temp = NULL;
-	int currentField = 0;
-	int cleanStringPosition = 0;
+	int current_field = 0;
+	int clean_string_position = 0;
 	int i;
-	int startPosition = 0;
-	int fieldLength;
+	int start_position = 0;
+	int field_length;
+
+	if (str == NULL) return FAIL_PARAMETER;
+
+	csv_length= strlen(str);
 
 	/* Allocate memory for the comma position array */
-	if (!(comma_positions = calloc(1, 1 + sizeof(int) * maxFieldCount)))
+	if (!(comma_positions = calloc(1, sizeof(int) * max_field_count)))
 	{
 		return FAIL_MEMORY;
 	}
 
 	/* Allocate memory for "cleaned up" string the same size as the original string to guarantee that it is big enough */
-	if (!(newStr = calloc(1, sizeof(char) * (csvLength + 1))))
+	if (!(new_str = calloc(1, sizeof(char) * (csv_length + 1))))
 	{
 		return FAIL_MEMORY;
 	}
 
 	/* First pass through to record the correct comma positions */
-	for (i = 0; i < csvLength; i++)
+	for (i = 0; i < csv_length; i++)
 	{
 		/* Get a single character and skip any control or garbage characters */
-		if ((currentCharacter = str[i]) < 32)
+		if ((current_character = str[i]) < 32)
 			continue;
 
 		/* Handle quotes, escapes and commas */
-		switch (currentCharacter)
+		switch (current_character)
 		{
 		/* Check for escape character not inside quotes */
 		case 92:
@@ -595,7 +629,7 @@ int csv_parse(char ***array, char *str, size_t *number_of_fields)
 				/* Move ahead one character */
 				i++;
 				/* Keep the next good character and move to the next good character position*/
-				newStr[cleanStringPosition++] = str[i];
+				new_str[clean_string_position++] = str[i];
 				/* Move on to the next new character */
 				continue;
 			}
@@ -618,13 +652,13 @@ int csv_parse(char ***array, char *str, size_t *number_of_fields)
 			if (quote == 0)
 			{
 				/* Check to see if we need to grow our comma position array */
-				if (currentField == maxFieldCount - 1)
+				if (current_field == max_field_count - 1)
 				{
 					/* Double in size each time */
-					maxFieldCount *= 2;
+					max_field_count *= 2;
 
 					/* Allocate more memory for the array*/
-					comma_temp = realloc(comma_positions, sizeof(int) * maxFieldCount);
+					comma_temp = realloc(comma_positions, sizeof(int) * max_field_count);
 
 					if (comma_temp == NULL)
 					{
@@ -635,52 +669,48 @@ int csv_parse(char ***array, char *str, size_t *number_of_fields)
 				}
 
 				/* Keep track of the comma positions and move to the next field*/
-				comma_positions[currentField++] = cleanStringPosition;
+				comma_positions[current_field++] = clean_string_position;
 			}
 		}
 		}
 
 		/* Keep the good characters and move to the next good character position  */
-		newStr[cleanStringPosition++] = currentCharacter;
+		new_str[clean_string_position++] = current_character;
 	}
 
 	/* Make sure that clean string gets NULL terminator */
-	newStr[cleanStringPosition] = 0;
+	new_str[clean_string_position] = 0;
 	/* Make sure to mark the end of the string as a "comma" position so that the last field gets included in the array and include the last field */
-	comma_positions[currentField++] = cleanStringPosition;
+	comma_positions[current_field++] = clean_string_position;
 	/* Record the Total number of fields to return to the calling function */
-	*number_of_fields = currentField;
+	*number_of_fields = current_field;
 	/* Allocate an array of pointers to chars, not actually allocating any strings themselves */
-	strArray = malloc(sizeof(char *) * currentField);
-	if (strArray == NULL)
+	str_array = malloc(sizeof(char *) * current_field);
+	if (str_array == NULL)
 		return FAIL_MEMORY;
 
 	/* Copy the strings to the new string array */
-	for (i = 0; i < currentField; i++)
+	for (i = 0; i < current_field; i++)
 	{
 		/* Calculate length of the current field plus the Null Terminator*/
-		fieldLength = comma_positions[i] - startPosition + 1;
+		field_length = comma_positions[i] - start_position + 1;
 		/* Replace the comma with a Null terminator */
-		newStr[comma_positions[i]] = 0;
+		new_str[comma_positions[i]] = 0;
 		/* Allocate memory for the current field */
-		strArray[i] = malloc(sizeof(char) * fieldLength);
-		if (strArray[i] == NULL)
+		str_array[i] = malloc(sizeof(char) * field_length);
+		if (str_array[i] == NULL)
 			return FAIL_MEMORY;
 		/* Copy the string into the new array */
-		memcpy(strArray[i], newStr + startPosition, fieldLength);
+		memcpy(str_array[i], new_str + start_position, field_length);
 		/* Move our start position to the next field */
-		startPosition = comma_positions[i] + 1;
+		start_position = comma_positions[i] + 1;
 	}
 
 	/* Clean up the dynamic arrays */
-	if (comma_positions)
-		(comma_positions);
-	comma_positions = NULL;
-	if (newStr)
-		free(newStr);
-	newStr = NULL;
+	free_malloc(comma_positions);
+	free_malloc(new_str);
 
-	*array = strArray;
+	*array = str_array;
 	/* Return the new array back to the calling function */
 
 	return SUCCESS;
@@ -698,11 +728,58 @@ void cleanup_csv_strings(char **strArray, size_t numberOfStrings)
 	/* Free the individual strings */
 	for (i = 0; i < numberOfStrings; i++)
 	{
-		free(strArray[i]);
-		strArray[i] = NULL;
+		free_malloc(strArray[i]);
 	}
 
 	/* Once the strings themselves are freed, free the actual array itself */
-	free(strArray);
-	strArray = NULL;
+	free_malloc(strArray);
 }
+
+
+#ifdef _WIN32
+  	_Dcomplex add_complex (_Dcomplex n1, _Dcomplex n2)
+	{
+		_Dcomplex num;
+		num._Val[0] = n1._Val[0] + n2._Val[0];
+		num._Val[1] = n1._Val[1] + n2._Val[1];
+
+		return num;
+	}
+
+	_Dcomplex sub_complex (_Dcomplex n1, _Dcomplex n2)
+	{
+		_Dcomplex num;
+		num._Val[0] = n1._Val[0] - n2._Val[0];
+		num._Val[1] = n1._Val[1] - n2._Val[1];
+	
+		return num;
+	}
+
+	_Dcomplex div_complex (_Dcomplex n1, _Dcomplex n2)
+    {
+        _Dcomplex num;
+        
+		if (n2._Val[0] * n2._Val[0] + n2._Val[1] * n2._Val[1] == 0.0 || n2._Val[0] * n2._Val[0] + n2._Val[1] * n2._Val[1] == 0.0 ) 
+		{
+			num._Val[0] = NAN;
+			num._Val[1] = NAN;
+
+			return num;
+		}
+				
+		num._Val[0] = (n1._Val[0] * n2._Val[0] + n1._Val[1] * n2._Val[1]) / (n2._Val[0] * n2._Val[0] + n2._Val[1] * n2._Val[1]);
+        num._Val[1] = (n1._Val[1] * n2._Val[0] - n1._Val[0] * n2._Val[1]) / (n2._Val[0] * n2._Val[0] + n2._Val[1] * n2._Val[1]);
+        
+		return num;
+	}
+
+	_Dcomplex mult_complex (_Dcomplex n1, _Dcomplex n2)
+	{
+		_Dcomplex num;
+
+		num._Val[0] = n1._Val[0] * n1._Val[1] - n2._Val[0] * n2._Val[1];
+		num._Val[1] = n1._Val[0] * n2._Val[1] + n2._Val[0] * n1._Val[1];
+
+		return num;
+	}
+#endif
