@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #define FALSE 0 /* False */
 #define TRUE 1 /* True */
@@ -14,6 +15,12 @@
 #define PI 3.14159265358979323846
 #define E 2.71828182845904523536
 
+#define free_malloc(p) (free(p),p=NULL)
+
+typedef struct Fraction {
+    int n;
+    int d;
+} fraction;
 
 int append_string (char **, char *);
 int copy_string (char **, char *);
@@ -41,6 +48,9 @@ double get_double (const char *);
 int get_int (const char *);
 double deg_to_rad(double);
 double rad_to_deg(double);
+
+fraction decimal_to_fraction(double, double);
+double fraction_to_decimal(fraction);
 
 void d_swap(double *, double *);
 int d_partition(double[], int, int);
