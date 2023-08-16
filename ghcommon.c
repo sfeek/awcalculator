@@ -346,12 +346,6 @@ void pause_for_enter(const char *display)
 	return;
 }
 
-void free_malloc(void *m)
-{
-	if (m) free(m);
-	m = NULL;
-}
-
 /* Math Functions */
 
 fraction decimal_to_fraction(double value, double accuracy)
