@@ -40,37 +40,41 @@ struct dipole calculate(double b_freq, double t_freq)
 
 int main(void)
 {
-    double freq_base; 
+    double freq_base;
     char **parsed = NULL;
     double *buffer = NULL;
     char *line = NULL;
     int numberOfFields;
     double threshold = 0.0;
-    double total_wire_len; 
-    
+    double total_wire_len;
+
     struct dipole *dpdb;
 
     while (TRUE)
     {
         threshold = get_double("\nEnter the match threshold (0.0-1.0): ");
-        if (threshold > 0.0 && threshold <= 1.0) break;
+        if (threshold > 0.0 && threshold <= 1.0)
+            break;
     }
 
-    while (get_string(&line,"\nEnter frequencies separated by commas: ") ==0 );
-    
+    while (get_string(&line, "\nEnter frequencies separated by commas: ") == 0)
+        ;
+
     if (csv_parse(&parsed, line, &numberOfFields))
     {
         printf("String parsing failed!\n");
         return FAIL;
     }
 
-    free_malloc (line);
+    free_malloc(line);
 
-    if (!(buffer = realloc(buffer, sizeof(double) * numberOfFields))) return FAIL;
+    if (!(buffer = realloc(buffer, sizeof(double) * numberOfFields)))
+        return FAIL;
 
     for (int i = 0; i < numberOfFields; i++)
     {
-        if (string_to_double(parsed[i],&buffer[i])) return FAIL_NUMBER;
+        if (string_to_double(parsed[i], &buffer[i]))
+            return FAIL_NUMBER;
     }
 
     cleanup_csv_strings(parsed, numberOfFields);
@@ -81,7 +85,8 @@ int main(void)
 
     total_wire_len = 468.0 / freq_base;
 
-    if (!(dpdb = malloc(sizeof(struct dipole) * numberOfFields))) return FAIL;
+    if (!(dpdb = malloc(sizeof(struct dipole) * numberOfFields)))
+        return FAIL;
 
     for (int i = 0; i < numberOfFields; i++)
     {
@@ -92,21 +97,20 @@ int main(void)
 
     for (int x = 90; x >= 0; x--)
     {
-        printf("\n%5.1f\t%5.1f\t\t%5.1f\t%5.1f\t\t", 100.0 - dpdb[0].percent[x],dpdb[0].percent[x], total_wire_len - dpdb[0].distance[x] , dpdb[0].distance[x]); 
-        int count=0;
+        printf("\n%5.1f\t%5.1f\t\t%5.1f\t%5.1f\t\t", 100.0 - dpdb[0].percent[x], dpdb[0].percent[x], total_wire_len - dpdb[0].distance[x], dpdb[0].distance[x]);
+        int count = 0;
         for (int i = 0; i < numberOfFields; i++)
         {
-            if (fabs(dpdb[0].b_amplitude[x]) >= threshold && fabs(dpdb[i].t_amplitude[x]) >= threshold) 
+            if (fabs(dpdb[0].b_amplitude[x]) >= threshold && fabs(dpdb[i].t_amplitude[x]) >= threshold)
             {
-                printf(" %5.3f(%1.2f,%1.1f) ",buffer[i],dpdb[i].t_amplitude[x],dpdb[i].impedance[x]);
+                printf(" %5.3f(%1.2f,%1.1f) ", buffer[i], dpdb[i].t_amplitude[x], dpdb[i].impedance[x]);
             }
         }
         printf("\n");
-       
     }
 
-    free_malloc (dpdb);
-    free_malloc (buffer);
+    free_malloc(dpdb);
+    free_malloc(buffer);
 
     pause_for_enter("\nPress Enter to Exit\n");
 
